@@ -34,10 +34,17 @@
 Di Vercel dashboard, tambahkan environment variables berikut:
 
 ```env
-VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
-VITE_GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-VITE_GOOGLE_SHEET_ID=your_google_sheet_id_here
+VITE_GOOGLE_CLIENT_ID=[your-google-client-id]
+VITE_GOOGLE_CLIENT_SECRET=[your-google-client-secret]
+VITE_GOOGLE_SHEETS_ID=1aU9Z2ofa93NZcti57l403fFDxJAyDFwe4Ux1LbI28tk
+VITE_USE_MOCK_DATA=false
 ```
+
+**PENTING:** Pastikan nama environment variable EXACT MATCH:
+- `VITE_GOOGLE_SHEETS_ID` (bukan `VITE_GOOGLE_SHEET_ID`)
+- `VITE_USE_MOCK_DATA=false` (untuk menggunakan data real)
+
+**Dapatkan nilai dari file .env lokal Anda**
 
 **Cara menambahkan:**
 1. Masuk ke Project Dashboard di Vercel

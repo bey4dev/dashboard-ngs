@@ -76,13 +76,29 @@ const TRANSACTION_SHEET_GID = '17627704'; // GID untuk data transaksi yang masuk
 const SOLD_ITEMS_SHEET_GID = '1522583917'; // GID untuk data barang terjual
 const CATEGORY_SALES_SHEET_GID = '1609460300'; // GID untuk data kategori penjualan (Lokalan, itemku, Vcgamer)
 // Force to false untuk debugging - pastikan menggunakan real data
-const USE_MOCK_DATA = false; // import.meta.env.VITE_USE_MOCK_DATA === 'true';
+const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true' ? true : false;
 
-console.log('🔧 Environment Variables:');
+console.log('🔧 Environment Variables Check:');
+console.log('VITE_GOOGLE_SHEETS_ID:', import.meta.env.VITE_GOOGLE_SHEETS_ID);
 console.log('VITE_USE_MOCK_DATA:', import.meta.env.VITE_USE_MOCK_DATA);
-console.log('USE_MOCK_DATA (forced):', USE_MOCK_DATA);
-console.log('SPREADSHEET_ID:', SPREADSHEET_ID);
+console.log('USE_MOCK_DATA (computed):', USE_MOCK_DATA);
+console.log('SPREADSHEET_ID (final):', SPREADSHEET_ID);
 console.log('DEBT_SHEET_GID:', DEBT_SHEET_GID);
+console.log('SALES_SHEET_GID:', SALES_SHEET_GID);
+console.log('🎯 SOLD_ITEMS_SHEET_GID:', SOLD_ITEMS_SHEET_GID, '(Expected: 1522583917)');
+
+// Production debugging
+if (typeof window !== 'undefined') {
+  (window as any).debugGoogleSheets = {
+    SPREADSHEET_ID,
+    USE_MOCK_DATA,
+    env: {
+      VITE_GOOGLE_SHEETS_ID: import.meta.env.VITE_GOOGLE_SHEETS_ID,
+      VITE_USE_MOCK_DATA: import.meta.env.VITE_USE_MOCK_DATA,
+    }
+  };
+  console.log('🐛 Debug info available at window.debugGoogleSheets');
+}
 console.log('SALES_SHEET_GID:', SALES_SHEET_GID);
 console.log('🎯 SOLD_ITEMS_SHEET_GID:', SOLD_ITEMS_SHEET_GID, '(Expected: 1522583917)');
 
