@@ -105,53 +105,56 @@ console.log('🎯 SOLD_ITEMS_SHEET_GID:', SOLD_ITEMS_SHEET_GID, '(Expected: 1522
 // Google Sheets CSV Export URL
 const CSV_EXPORT_BASE = 'https://docs.google.com/spreadsheets/d';
 
+// Alternative public URL that works better with CORS
+const PUBLIC_CSV_BASE = 'https://docs.google.com/spreadsheets/u/0/d';
+
 // Detect if running in production (Vercel)
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
 
-// Function to get CSV data - use proxy in production to avoid CORS issues
+// SIMPLE SOLUTION: Try multiple URL formats until one works
 async function fetchCSVData(spreadsheetId: string, gid: string): Promise<string> {
-  let csvUrl: string;
-  let fetchOptions: RequestInit = {
-    method: 'GET',
-    headers: {
-      'Accept': 'text/csv,text/plain,*/*',
-      'Cache-Control': 'no-cache',
-    },
-  };
+  const urls = [
+    // Try public URL first (often works better)
+    `${PUBLIC_CSV_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`,
+    // Fallback to regular URL
+    `${CSV_EXPORT_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`,
+    // Alternative format
+    `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`,
+  ];
 
-  if (isProduction) {
-    // Use Vercel API proxy in production to avoid CORS
-    csvUrl = `/api/sheets?sheetId=${spreadsheetId}&gid=${gid}`;
-    console.log('🔄 Using Vercel API proxy for production');
-  } else {
-    // Direct access for localhost development
-    csvUrl = `${CSV_EXPORT_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`;
-    console.log('🔄 Using direct Google Sheets access for localhost');
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    console.log(`� Trying URL ${i + 1}/${urls.length}:`, url);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/csv,text/plain,*/*',
+          'Cache-Control': 'no-cache',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+        mode: 'cors',
+      });
+
+      console.log(`📡 Response ${i + 1} status:`, response.status);
+
+      if (response.ok) {
+        const csvText = await response.text();
+        if (csvText && csvText.length > 0) {
+          console.log(`✅ Success with URL ${i + 1}! CSV length:`, csvText.length);
+          return csvText;
+        }
+      }
+    } catch (error) {
+      console.warn(`❌ URL ${i + 1} failed:`, error);
+      lastError = error as Error;
+    }
   }
 
-  console.log('🔗 Fetching CSV from:', csvUrl);
-
-  const response = await fetch(csvUrl, fetchOptions);
-  
-  console.log('📡 Response status:', response.status);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('❌ CSV fetch error details:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorText: errorText.substring(0, 500),
-      url: csvUrl,
-      isProduction
-    });
-    
-    throw new Error(`CSV fetch failed: ${response.status} - ${response.statusText}`);
-  }
-
-  const csvText = await response.text();
-  console.log('📄 CSV data received, length:', csvText.length);
-  
-  return csvText;
+  throw lastError || new Error('All CSV fetch attempts failed');
 }
 
 // Fungsi untuk parsing CSV data
@@ -787,7 +790,6 @@ const mockSoldItemsData: SoldItemData[] = [
 export async function fetchDebtData(): Promise<DebtData[]> {
   try {
     console.log('🔧 fetchDebtData called - USE_MOCK_DATA:', USE_MOCK_DATA);
-    console.log('🔧 VITE_USE_MOCK_DATA env:', import.meta.env.VITE_USE_MOCK_DATA);
     console.log('🔧 Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
     
     // Jika menggunakan mock data untuk development
@@ -797,46 +799,54 @@ export async function fetchDebtData(): Promise<DebtData[]> {
       return mockDebtData;
     }
 
-    // Fetch CSV data using proxy or direct method
-    console.log('📊 Fetching debt data from CSV export...');
+    console.log('📊 Attempting to fetch debt data...');
     
     try {
+      // STRATEGY 1: Try multiple CSV URLs
       const csvText = await fetchCSVData(SPREADSHEET_ID, DEBT_SHEET_GID);
       
-      console.log('📄 CSV Text length:', csvText.length);
-      console.log('📄 First 500 chars:', csvText.substring(0, 500));
-      
-      if (csvText.length === 0) {
-        console.warn('⚠️ Empty CSV response, using mock data');
-        return mockDebtData;
+      if (csvText && csvText.length > 0) {
+        console.log('📄 CSV Text length:', csvText.length);
+        console.log('📄 First 500 chars:', csvText.substring(0, 500));
+        
+        const rows = parseCSV(csvText);
+        console.log('📊 Parsed rows:', rows.length);
+        
+        if (rows.length > 1) {
+          const result = parseDebtDataFromCSV(rows);
+          console.log('✅ Final debt data result:', result.length, 'records');
+          return result;
+        }
       }
+    } catch (csvError) {
+      console.warn('⚠️ CSV fetch failed, trying Google Sheets API...');
       
-      const rows = parseCSV(csvText);
-      console.log('📊 Parsed rows:', rows.length);
-      
-      if (rows.length > 1) {
-        const result = parseDebtDataFromCSV(rows);
-        console.log('✅ Final debt data result:', result.length, 'records');
-        return result;
+      try {
+        // STRATEGY 2: Use Google Sheets API
+        const { fetchGoogleSheetsAPI, convertAPIResponseToCSV } = await import('./googleSheetsAPI');
+        const apiData = await fetchGoogleSheetsAPI(SPREADSHEET_ID, 'Sheet1!A:Z'); // Adjust range as needed
+        
+        if (apiData && apiData.length > 0) {
+          const csvText = convertAPIResponseToCSV(apiData);
+          const rows = parseCSV(csvText);
+          
+          if (rows.length > 1) {
+            const result = parseDebtDataFromCSV(rows);
+            console.log('✅ API fallback successful! Records:', result.length);
+            return result;
+          }
+        }
+      } catch (apiError) {
+        console.warn('⚠️ Google Sheets API also failed:', apiError);
       }
-      
-      // Fallback to mock data
-      console.warn('⚠️ No data found in CSV, using mock data');
-      return mockDebtData;
-      
-    } catch (fetchError) {
-      console.error('❌ Error fetching debt CSV:', fetchError);
-      
-      // Check if it's a permission/CORS issue
-      if (fetchError instanceof Error && (fetchError.message.includes('400') || fetchError.message.includes('403') || fetchError.message.includes('CORS'))) {
-        console.warn('⚠️ Permission/CORS issue detected. Using mock data.');
-      }
-      
-      throw fetchError;
     }
     
+    // STRATEGY 3: Use mock data as final fallback
+    console.warn('⚠️ All data fetching methods failed, using mock data');
+    return mockDebtData;
+    
   } catch (error) {
-    console.error('❌ Error fetching debt data:', error);
+    console.error('❌ Error in fetchDebtData:', error);
     console.log('🔄 Falling back to mock data');
     return mockDebtData;
   }
@@ -854,50 +864,59 @@ export async function fetchSalesData(): Promise<SalesData[]> {
       return mockSalesData;
     }
 
-    // Fetch CSV data using proxy or direct method
-    console.log('📊 Fetching sales data from CSV export...');
+    console.log('📊 Attempting to fetch sales data...');
     
     try {
+      // STRATEGY 1: Try multiple CSV URLs
       const csvText = await fetchCSVData(SPREADSHEET_ID, SALES_SHEET_GID);
       
-      console.log('📄 Sales CSV Text length:', csvText.length);
-      console.log('📄 Sales CSV first 1000 chars:', csvText.substring(0, 1000));
-      
-      if (csvText.length === 0) {
-        console.warn('⚠️ Empty sales CSV response, using mock data');
-        return mockSalesData;
+      if (csvText && csvText.length > 0) {
+        console.log('📄 Sales CSV Text length:', csvText.length);
+        console.log('📄 Sales CSV first 1000 chars:', csvText.substring(0, 1000));
+        
+        const rows = parseCSV(csvText);
+        console.log('📊 Sales parsed rows:', rows.length);
+        
+        if (rows.length > 0) {
+          console.log('📊 Sales Header row:', rows[0]);
+          console.log('📊 Sales First data rows:', rows.slice(1, 4));
+        }
+        
+        if (rows.length > 1) {
+          const result = parseSalesDataFromCSV(rows);
+          console.log('✅ Final sales data result:', result.length, 'records');
+          return result;
+        }
       }
+    } catch (csvError) {
+      console.warn('⚠️ Sales CSV fetch failed, trying Google Sheets API...');
       
-      const rows = parseCSV(csvText);
-      console.log('📊 Sales parsed rows:', rows.length);
-      if (rows.length > 0) {
-        console.log('📊 Sales Header row:', rows[0]);
-        console.log('📊 Sales First data rows:', rows.slice(1, 4));
+      try {
+        // STRATEGY 2: Use Google Sheets API
+        const { fetchGoogleSheetsAPI, convertAPIResponseToCSV } = await import('./googleSheetsAPI');
+        const apiData = await fetchGoogleSheetsAPI(SPREADSHEET_ID, 'Sheet2!A:Z'); // Adjust range as needed
+        
+        if (apiData && apiData.length > 0) {
+          const csvText = convertAPIResponseToCSV(apiData);
+          const rows = parseCSV(csvText);
+          
+          if (rows.length > 1) {
+            const result = parseSalesDataFromCSV(rows);
+            console.log('✅ Sales API fallback successful! Records:', result.length);
+            return result;
+          }
+        }
+      } catch (apiError) {
+        console.warn('⚠️ Sales Google Sheets API also failed:', apiError);
       }
-      
-      if (rows.length > 1) {
-        const result = parseSalesDataFromCSV(rows);
-        console.log('✅ Final sales data result:', result.length, 'records');
-        return result;
-      }
-      
-      // Fallback to mock data
-      console.warn('⚠️ No sales data found in CSV, using mock data');
-      return mockSalesData;
-      
-    } catch (fetchError) {
-      console.error('❌ Error fetching sales CSV:', fetchError);
-      
-      // Check if it's a permission/CORS issue
-      if (fetchError instanceof Error && (fetchError.message.includes('400') || fetchError.message.includes('403') || fetchError.message.includes('CORS'))) {
-        console.warn('⚠️ Permission/CORS issue detected for sales. Using mock data.');
-      }
-      
-      throw fetchError;
     }
     
+    // STRATEGY 3: Use mock data as final fallback
+    console.warn('⚠️ All sales data fetching methods failed, using mock data');
+    return mockSalesData;
+    
   } catch (error) {
-    console.error('❌ Error fetching sales data:', error);
+    console.error('❌ Error in fetchSalesData:', error);
     console.log('🔄 Falling back to mock sales data');
     return mockSalesData;
   }
