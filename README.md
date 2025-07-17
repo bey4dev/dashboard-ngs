@@ -2,6 +2,10 @@
 
 Dashboard untuk monitoring hutang piutang dan rekap penjualan dengan data dari Google Sheets.
 
+## 🚀 Live Demo
+- **Production**: [dashboard-ngs.vercel.app](https://dashboard-ngs.vercel.app)
+- **GitHub**: [github.com/bey4dev/dashboard-ngs](https://github.com/bey4dev/dashboard-ngs)
+
 ## 🚀 Quick Start
 
 ### Metode Cepat (Recommended)
@@ -27,6 +31,22 @@ Ikuti panduan di [GOOGLE_CLOUD_SETUP.md](./GOOGLE_CLOUD_SETUP.md)
 - 🔄 **Real-time Refresh**: Data terbaru dari Google Sheets
 - 📱 **Responsive Design**: Optimal di desktop dan mobile
 - 🧪 **Connection Test**: Tool untuk test koneksi Google Sheets
+- ⚡ **Performance Optimized**: Caching dan optimasi untuk production
+
+## 📊 Performance
+
+### Localhost vs Production
+- **Localhost**: ~500ms (direct Google Sheets access)
+- **Production**: ~1-2s first load, ~200-500ms cached (optimized API)
+
+### Testing Performance
+```javascript
+// Paste in browser console
+fetch('/performance-test.js').then(r => r.text()).then(eval);
+performanceTest.runAllTests();
+```
+
+📖 **Guides**: [PERFORMANCE_OPTIMIZATION.md](./PERFORMANCE_OPTIMIZATION.md)
 
 ## 🛠 Teknologi
 
