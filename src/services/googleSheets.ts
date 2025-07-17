@@ -751,15 +751,46 @@ export async function fetchDebtData(): Promise<DebtData[]> {
     console.log('📊 Fetching debt data from CSV export...');
     const csvUrl = `${CSV_EXPORT_BASE}/${SPREADSHEET_ID}/export?format=csv&gid=${DEBT_SHEET_GID}`;
     console.log('🔗 CSV URL:', csvUrl);
-    const response = await fetch(csvUrl);
+    
+    const response = await fetch(csvUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/csv,text/plain,*/*',
+        'Cache-Control': 'no-cache',
+      },
+    });
+    
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
-      throw new Error(`CSV fetch failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ CSV fetch error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText.substring(0, 500),
+        url: csvUrl
+      });
+      
+      // Check if it's a permission issue
+      if (response.status === 400 || response.status === 403) {
+        console.warn('⚠️ Permission issue detected. Sheet might not be public.');
+        console.warn('⚠️ Using mock data due to access restriction.');
+        return mockDebtData;
+      }
+      
+      throw new Error(`CSV fetch failed: ${response.status} - ${response.statusText}`);
     }
     
     const csvText = await response.text();
     console.log('📄 CSV Text length:', csvText.length);
     console.log('📄 First 500 chars:', csvText.substring(0, 500));
+    
+    if (csvText.length === 0) {
+      console.warn('⚠️ Empty CSV response, using mock data');
+      return mockDebtData;
+    }
+    
     const rows = parseCSV(csvText);
     console.log('📊 Parsed rows:', rows.length);
     
@@ -770,7 +801,7 @@ export async function fetchDebtData(): Promise<DebtData[]> {
     }
     
     // Fallback to mock data
-    console.warn('⚠️ No data found, using mock data');
+    console.warn('⚠️ No data found in CSV, using mock data');
     return mockDebtData;
     
   } catch (error) {
@@ -795,15 +826,46 @@ export async function fetchSalesData(): Promise<SalesData[]> {
     console.log('📊 Fetching sales data from CSV export...');
     const csvUrl = `${CSV_EXPORT_BASE}/${SPREADSHEET_ID}/export?format=csv&gid=${SALES_SHEET_GID}`;
     console.log('🔗 CSV URL:', csvUrl);
-    const response = await fetch(csvUrl);
+    
+    const response = await fetch(csvUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/csv,text/plain,*/*',
+        'Cache-Control': 'no-cache',
+      },
+    });
+    
+    console.log('📡 Sales Response status:', response.status);
+    console.log('📡 Sales Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
-      throw new Error(`CSV fetch failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Sales CSV fetch error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText.substring(0, 500),
+        url: csvUrl
+      });
+      
+      // Check if it's a permission issue
+      if (response.status === 400 || response.status === 403) {
+        console.warn('⚠️ Permission issue detected for sales sheet. Sheet might not be public.');
+        console.warn('⚠️ Using mock sales data due to access restriction.');
+        return mockSalesData;
+      }
+      
+      throw new Error(`Sales CSV fetch failed: ${response.status} - ${response.statusText}`);
     }
     
     const csvText = await response.text();
     console.log('📄 Sales CSV Text length:', csvText.length);
     console.log('📄 Sales CSV first 1000 chars:', csvText.substring(0, 1000));
+    
+    if (csvText.length === 0) {
+      console.warn('⚠️ Empty sales CSV response, using mock data');
+      return mockSalesData;
+    }
+    
     const rows = parseCSV(csvText);
     console.log('📊 Sales parsed rows:', rows.length);
     if (rows.length > 0) {
@@ -818,12 +880,12 @@ export async function fetchSalesData(): Promise<SalesData[]> {
     }
     
     // Fallback to mock data
-    console.warn('⚠️ No data found, using mock data');
+    console.warn('⚠️ No sales data found in CSV, using mock data');
     return mockSalesData;
     
   } catch (error) {
     console.error('❌ Error fetching sales data:', error);
-    console.log('🔄 Falling back to mock data');
+    console.log('🔄 Falling back to mock sales data');
     return mockSalesData;
   }
 }
