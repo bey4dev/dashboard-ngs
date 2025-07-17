@@ -111,50 +111,80 @@ const PUBLIC_CSV_BASE = 'https://docs.google.com/spreadsheets/u/0/d';
 // Detect if running in production (Vercel)
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
 
-// SIMPLE SOLUTION: Try multiple URL formats until one works
+// Frontend cache for better performance
+const dataCache = new Map<string, { data: string; timestamp: number; }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 menit cache
+
+// OPTIMIZED: Try multiple URL formats with caching
 async function fetchCSVData(spreadsheetId: string, gid: string): Promise<string> {
-  const urls = [
-    // Try public URL first (often works better)
-    `${PUBLIC_CSV_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`,
-    // Fallback to regular URL
-    `${CSV_EXPORT_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`,
-    // Alternative format
-    `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`,
-  ];
-
-  let lastError: Error | null = null;
-
-  for (let i = 0; i < urls.length; i++) {
-    const url = urls[i];
-    console.log(`� Trying URL ${i + 1}/${urls.length}:`, url);
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/csv,text/plain,*/*',
-          'Cache-Control': 'no-cache',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-        mode: 'cors',
-      });
-
-      console.log(`📡 Response ${i + 1} status:`, response.status);
-
-      if (response.ok) {
-        const csvText = await response.text();
-        if (csvText && csvText.length > 0) {
-          console.log(`✅ Success with URL ${i + 1}! CSV length:`, csvText.length);
-          return csvText;
-        }
-      }
-    } catch (error) {
-      console.warn(`❌ URL ${i + 1} failed:`, error);
-      lastError = error as Error;
-    }
+  const cacheKey = `${spreadsheetId}-${gid}`;
+  
+  // Check frontend cache first
+  const cachedData = dataCache.get(cacheKey);
+  if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+    console.log('🚀 Using cached data for:', cacheKey);
+    return cachedData.data;
   }
 
-  throw lastError || new Error('All CSV fetch attempts failed');
+  if (isProduction) {
+    // Use optimized Vercel API in production
+    console.log('🔄 Using optimized Vercel API for production');
+    const response = await fetch(`/api/sheets-optimized?sheetId=${spreadsheetId}&gid=${gid}`);
+    
+    if (response.ok) {
+      const csvText = await response.text();
+      // Cache the result
+      dataCache.set(cacheKey, { data: csvText, timestamp: Date.now() });
+      return csvText;
+    } else {
+      throw new Error(`Optimized API failed: ${response.status}`);
+    }
+  } else {
+    // Direct access for localhost with multiple URLs
+    console.log('🔄 Using direct Google Sheets access for localhost');
+    
+    const urls = [
+      `${PUBLIC_CSV_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`,
+      `${CSV_EXPORT_BASE}/${spreadsheetId}/export?format=csv&gid=${gid}`,
+      `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`,
+    ];
+
+    let lastError: Error | null = null;
+
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      console.log(`🔄 Trying URL ${i + 1}/${urls.length}:`, url);
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'text/csv,text/plain,*/*',
+            'Cache-Control': 'no-cache',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          mode: 'cors',
+        });
+
+        console.log(`📡 Response ${i + 1} status:`, response.status);
+
+        if (response.ok) {
+          const csvText = await response.text();
+          if (csvText && csvText.length > 0) {
+            console.log(`✅ Success with URL ${i + 1}! CSV length:`, csvText.length);
+            // Cache the result
+            dataCache.set(cacheKey, { data: csvText, timestamp: Date.now() });
+            return csvText;
+          }
+        }
+      } catch (error) {
+        console.warn(`❌ URL ${i + 1} failed:`, error);
+        lastError = error as Error;
+      }
+    }
+
+    throw lastError || new Error('All CSV fetch attempts failed');
+  }
 }
 
 // Fungsi untuk parsing CSV data
