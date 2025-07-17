@@ -956,7 +956,7 @@ export async function fetchCategorySalesData(dateFilter?: 'today' | 'yesterday' 
 }
 
 // Filter category sales data by date - Parse data dengan filter tanggal
-export function filterCategorySalesByDate(categorySales: CategorySalesData[], filter: 'today' | 'yesterday' | 'week' | '2weeks' | 'month' | 'year' | 'lastYear'): CategorySalesData[] {
+export function filterCategorySalesByDate(categorySales: CategorySalesData[], _filter: 'today' | 'yesterday' | 'week' | '2weeks' | 'month' | 'year' | 'lastYear'): CategorySalesData[] {
   // Karena category sales adalah hasil agregasi dari semua data,
   // kita perlu re-parse data dengan filter tanggal
   // Untuk sekarang return as is, nanti akan diimplementasi parsing dengan date range

@@ -114,22 +114,30 @@ Buat file `vercel.json` di root project untuk konfigurasi advanced:
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
   ]
 }
 ```
 
+**Note**: File `vercel.json` sudah disediakan di project ini dan sudah dikonfigurasi untuk SPA (Single Page Application).
+
 ## 🚨 Troubleshooting
 
 ### Common Issues
 
-1. **Build Fails**
+1. **Build Fails - Functions Pattern Error**
+   ```
+   Error: The pattern "src/**/*.{js,ts}" defined in `functions` doesn't match any Serverless Functions
+   ```
+   **Solution**: Hapus konfigurasi `functions` dari `vercel.json` karena ini adalah SPA, bukan project dengan serverless functions.
+
+2. **Build Fails - Dependencies**
    ```bash
    # Check dependencies
    npm install
