@@ -3,8 +3,17 @@ export const GOOGLE_CONFIG = {
   // Client ID yang akan didapat dari Google Cloud Console
   clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
   
-  // Redirect URI untuk development
-  redirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:5173/auth/callback',
+  // Redirect URI - automatically detect environment
+  redirectUri: (() => {
+    // Use environment variable if set
+    if (import.meta.env.VITE_GOOGLE_REDIRECT_URI) {
+      return import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+    }
+    
+    // Auto-detect based on current URL
+    const currentHost = window.location.origin;
+    return `${currentHost}/auth/callback`;
+  })(),
   
   // Scopes yang diperlukan
   scopes: [
