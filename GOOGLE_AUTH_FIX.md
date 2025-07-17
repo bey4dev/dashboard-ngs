@@ -1,6 +1,44 @@
 # 🔧 Google Cloud Console Configuration Fix
 
-## 🚨 Masalah Redirect Mismatch - Solusi
+## 🚨 ERROR SAAT INI: redirect_uri_mismatch
+
+**Error yang Anda alami:**
+```
+redirect_uri: https://your-vercel-domain.vercel.app/auth/callback
+```
+
+**Masalah:** Placeholder `your-vercel-domain` tidak valid!
+
+### 🔧 SOLUSI LANGSUNG:
+
+#### 1. Dapatkan Domain Vercel Yang Sebenarnya
+
+Dari deployment Vercel Anda, domain sebenarnya kemungkinan adalah:
+- `https://dashboard-ngs.vercel.app`
+- `https://dashboard-ngs-git-main.vercel.app`  
+- `https://dashboard-ngs-bey4dev.vercel.app`
+
+#### 2. Update Google Cloud Console SEKARANG:
+
+**Client ID:** `561808879266-eohb1fn3bv4j1tk2ecqiomeld1g72pq4`
+
+**Authorized JavaScript Origins - ADD THESE EXACT URLs:**
+```
+http://localhost:5173
+http://localhost:3000
+https://dashboard-ngs.vercel.app
+https://dashboard-ngs-git-main.vercel.app
+https://dashboard-ngs-bey4dev.vercel.app
+```
+
+**Authorized Redirect URIs - ADD THESE EXACT URLs:**
+```
+http://localhost:5173/auth/callback
+http://localhost:3000/auth/callback
+https://dashboard-ngs.vercel.app/auth/callback
+https://dashboard-ngs-git-main.vercel.app/auth/callback
+https://dashboard-ngs-bey4dev.vercel.app/auth/callback
+```
 
 ### 📋 Yang Perlu Dikonfigurasi di Google Cloud Console:
 
