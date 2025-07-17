@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NogoGini Dashboard</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Debug script untuk dark mode
+      setTimeout(() => {
+        console.log('=== DARK MODE DEBUG ===');
+        console.log('Document classes:', document.documentElement.className);
+        console.log('Theme in localStorage:', localStorage.getItem('dashboard-theme'));
+        
+        // Test function untuk force dark mode
+        window.forceDarkMode = function() {
+          const root = document.documentElement;
+          root.classList.add('dark');
+          localStorage.setItem('dashboard-theme', 'dark');
+          console.log('FORCED Dark mode enabled');
+          console.log('Classes now:', root.className);
+        };
+        
+        // Test function untuk force light mode
+        window.forceLightMode = function() {
+          const root = document.documentElement;
+          root.classList.remove('dark');
+          localStorage.setItem('dashboard-theme', 'light');
+          console.log('FORCED Light mode enabled');
+          console.log('Classes now:', root.className);
+        };
+        
+        // Test function untuk toggle manual
+        window.testToggle = function() {
+          const root = document.documentElement;
+          if (root.classList.contains('dark')) {
+            root.classList.remove('dark');
+            localStorage.setItem('dashboard-theme', 'light');
+            console.log('Switched to light mode');
+          } else {
+            root.classList.add('dark');
+            localStorage.setItem('dashboard-theme', 'dark');
+            console.log('Switched to dark mode');
+          }
+          console.log('New classes:', root.className);
+        };
+        
+        console.log('Available functions:');
+        console.log('- forceDarkMode() - Force enable dark mode');
+        console.log('- forceLightMode() - Force enable light mode');
+        console.log('- testToggle() - Toggle between modes');
+      }, 1000);
+    </script>
+  </body>
+</html>
